@@ -7,6 +7,5 @@ execute:
 
 ```{r}
 #| message: false
+cat(readLines("analysis.qmd", warn = FALSE), sep = "\n")
 ```
-library(tidyverse)
-library(arrow)
