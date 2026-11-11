@@ -27,15 +27,60 @@ crypto <- prices |>
 ```
 
 ```{r}
+# Six chromatic colors from base R's colorblind-safe Okabe-Ito palette
+okabe_ito <- unname(palette.colors(7, palette = "Okabe-Ito")[-1])
+
 crypto |>
+  group_by(date, category_name) |>
+  summarise(cat_mcap = sum(market_cap_usd, na.rm = TRUE), .groups = "drop") |>
+  complete(date, category_name, fill = list(cat_mcap = 0)) |>
   group_by(date) |>
-  summarise(total_mcap = sum(market_cap_usd, na.rm = TRUE)) |>
-  ggplot(aes(x = date, y = total_mcap / 1e12)) +
-  geom_line() +
+  mutate(share = cat_mcap / sum(cat_mcap)) |>
+  ungroup() |>
+  # Order legend (and stacked bands) from largest to smallest typical share
+  mutate(category_name = fct_reorder(category_name, share, .fun = median, .desc = TRUE)) |>
+  ggplot(aes(x = date, y = share, fill = category_name)) +
+  geom_area() +
+  # Mark the Luna/UST crash (May 7–12, 2022) and FTX collapse (Nov 8–11, 2022)
+  annotate(
+    "rect",
+    xmin = ymd(c("2022-05-07", "2022-11-08")),
+    xmax = ymd(c("2022-05-12", "2022-11-11")),
+    ymin = 0, ymax = 1,
+    fill = "black", alpha = 0.35
+  ) +
+  geom_vline(
+    xintercept = ymd(c("2022-05-09", "2022-11-09")),
+    linetype = "dashed", color = "grey15", linewidth = 0.5
+  ) +
+  annotate(
+    "label",
+    x = ymd("2022-04-20"), y = 0.88, hjust = 1, size = 3,
+    fill = "white", alpha = 0.9, label.size = 0.25,
+    label = "Luna/UST crash\n(May 7–12, 2022)"
+  ) +
+  annotate(
+    "label",
+    x = ymd("2022-11-28"), y = 0.78, hjust = 0, size = 3,
+    fill = "white", alpha = 0.9, label.size = 0.25,
+    label = "FTX collapse\n(Nov 8–11, 2022)"
+  ) +
+  scale_fill_manual(values = okabe_ito) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", expand = expansion(mult = 0.01)) +
+  scale_y_continuous(labels = scales::label_percent(), expand = expansion(mult = 0)) +
   labs(
-    x = NULL,
-    y = "Total market cap (trillions USD)",
-    title = "Total crypto market capitalization, 2018–2026"
+    title = "Crypto Market-Cap Share by Category, 2018–2026",
+    subtitle = "Daily share of total market capitalization across six coin categories (summing to 100%)",
+    x = "Year",
+    y = "Share of total market cap",
+    fill = "Category",
+    caption = "Source: Course cryptocurrency dataset (22 coins, Jan 2018–May 2026)."
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.grid.minor = element_blank(),
+    plot.title.position = "plot",
+    plot.caption.position = "plot"
   )
 ```
 
