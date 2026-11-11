@@ -1,0 +1,41 @@
+---
+title: "Crypto Markets"
+author: "Isabella Chandler"
+execute:
+  echo: false
+---
+
+```{r}
+#| message: false
+library(tidyverse)
+library(arrow)
+```
+
+```{r}
+#| cache: true
+prices <- open_dataset("data/daily_prices.parquet") |>
+  collect()
+metadata <- open_dataset("data/coin_metadata.parquet") |>
+  collect()
+categories <- open_dataset("data/categories.parquet") |>
+  collect()
+
+crypto <- prices |>
+  left_join(metadata, by = "coin_id") |>
+  left_join(select(categories, -description), by = "category_id") |>
+  mutate(date = ymd(date_raw))
+```
+
+```{r}
+crypto |>
+  group_by(date) |>
+  summarise(total_mcap = sum(market_cap_usd, na.rm = TRUE)) |>
+  ggplot(aes(x = date, y = total_mcap / 1e12)) +
+  geom_line() +
+  labs(
+    x = NULL,
+    y = "Total market cap (trillions USD)",
+    title = "Total crypto market capitalization, 2018–2026"
+  )
+```
+
